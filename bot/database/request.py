@@ -11,6 +11,26 @@ async def set_user(tg_id):
             session.add(User(tg_id=tg_id))
             await session.commit()
 
+async def set_item(data):
+    async with async_session() as session:
+        session.add(Item(**data))
+        await session.commit()
+
+
+async def set_basket(tg_id, item_id):
+    async with async_session() as session:
+        user = await session.scalar(select(User).where(User.tg_id == tg_id))
+        session.add(Basket(user=user.id, item=item_id))
+        await session.commit()
+
+async def get_basket(tg_id):
+    async with async_session() as session:
+        user = await session.scalar(select(User).where(User.tg_id == tg_id))
+        basket = await session.scalars(select(Basket).where(Basket.user == user.id))
+        return basket
+
+
+
 async def get_users():
     async with async_session() as session:
         users = await session.scalars(select(User))
@@ -25,11 +45,19 @@ async def get_categories():
 
 async def get_category_item(category_id:int):
     async with async_session() as session:
-        return await session.scalars(select(Item).where(Item.category == category_id))
+        items = await session.scalars(select(Item).where(Item.category == category_id))
+        return items
 
 
-async def get_item(item_id):
+async def get_item(item_id: int):
     async with async_session() as session:
-        return await session.scalar(select(Item).where(Item.id == item_id))
+        item =  await session.scalar(select(Item).where(Item.id == item_id))
+        return item
+
+async def delete_basket(tg_id, item_id):
+    async with async_session() as session:
+        user = await session.scalar(select(User).where(User.tg_id == tg_id))
+        await session.execute(delete(Basket).where(Basket.user == user.id, Basket.item == item_id))
+        await session.commit()
 
 

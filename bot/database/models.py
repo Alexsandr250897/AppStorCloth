@@ -42,6 +42,7 @@ class Item(Base):
     category: Mapped[int] = mapped_column(ForeignKey('categories.id'))
 
     category_rel: Mapped['Category'] = relationship(back_populates='item_rel')
+    basket_rel: Mapped[List['Basket']] = relationship(back_populates='item_rel')
 
 class Basket(Base):
     __tablename__ = 'basket'

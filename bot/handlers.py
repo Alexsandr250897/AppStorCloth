@@ -3,10 +3,10 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 
+
 # from bot.state import Register
 import bot.keyboards as kb
-# import bot.database.request as rq
-from bot.database.request import get_item,set_user
+from bot.database.request import get_item, set_user, set_basket,get_basket, delete_basket
 from bot.state import Register
 
 router = Router()
@@ -18,27 +18,57 @@ async def cmd_start(message: Message | CallbackQuery):
         await set_user(message.from_user.id)
         await message.answer('Welcome to the Eva_Margo store !',reply_markup=kb.main)
     else:
-        await message.message.edit_text('Welcome to the Eva_Margo store !',reply_markup=kb.main)
+        await message.answer('You are back to home')
+        await message.message.answer('Welcome to the Eva_Margo store !',reply_markup=kb.main)
 
-@router.message(F.data == 'catalog')
+@router.callback_query(F.data == 'catalog')
 async def catalog(callback: CallbackQuery):
     await callback.answer('')
-    await callback.message.edit_text('Select product category', reply_markup= await kb.categories())
+    await callback.message.edit_text('Select product category',
+                                     reply_markup= await kb.categories())
 
 
 @router.callback_query(F.data.startswith('category_'))
 async def category(callback:CallbackQuery):
     await callback.answer('You have selected a category')
-    await callback.message.answer('Select product by category ',
+    await callback.message.edit_text('Select product by category ',
                                   reply_markup=await kb.items(callback.data.split('_')[1]))
 
 
 @router.callback_query(F.data.startswith('item_'))
 async def category(callback: CallbackQuery):
-    item_data = await get_item(callback.data.split('_')[1])
-    await callback.answer('You have selected a product')
-    await callback.message.edit_text(f'Product name: {item_data.name}\nDescription: {item_data.description}\nPrice: {item_data.price}$',
-                                  reply_markup=await kb.items(callback.data.split('_')[1]))
+    item = await get_item(callback.data.split('_')[1])
+    await callback.answer('')
+    await callback.message.answer_photo(photo= item.photo, caption=f' {item.name}\n\n {item.description}\n\n {item.price} $',
+                                  reply_markup= await kb.basket(item.id))
+
+@router.callback_query(F.data.startswith('order_'))
+async def basket(callback: CallbackQuery):
+    await set_basket(callback.from_user.id, callback.data.split('_')[1])
+    await callback.answer('Item added to basket')
+
+@router.callback_query(F.data == 'mybasket')
+async def mybasket(callback: CallbackQuery):
+    await callback.answer('')
+    basket = await get_basket(callback.from_user.id)
+    counter = 0
+    for item_info in basket:
+        item = await get_item(item_info.item)
+        await callback.message.answer_photo(photo=item.photo, caption=f' {item.name}\n\n {item.description}\n\n{item.price}',
+                                        reply_markup=await kb.delete_from_basket(item.id))
+        counter += 1
+    await callback.message.answer('Your basket is  empty') if counter == 0 else await callback.answer('')
+
+@router.callback_query(F.data.startswith('delete_'))
+async def delete_from_bascek(callback: CallbackQuery):
+    await callback.answer('')
+    await delete_basket(callback.from_user.id, callback.data.split('_')[1])
+    await callback.message.delete()
+    await callback.message.answer('You have removed an item from your cart')
+
+
+
+
 
 
 @router.message(Command('register'))
