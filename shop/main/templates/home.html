@@ -1,0 +1,7 @@
+{%extends 'base.html'%}
+{%block content%}
+<h1>home</h1>
+{%if user.is_authenticated%}
+<a href="{%url 'logout'%}"class="link">logout</a>
+{%endif%}
+{%endblock%}
